@@ -42,7 +42,7 @@ function initArray(size, value) {
 function init2DArray(width, height, value) {
     var array = [];
     for(var x = 0; x < width; ++x) {
-        array[x] = initArray(height, EMPTY);
+        array[x] = initArray(height, value);
     }
     return array;
 }
@@ -86,6 +86,10 @@ function ChaosMonkey(color) {
     this.color = color;
 }
 
+ChaosMonkey.prototype.description = function() {
+    return "Chaos Monkey";
+};
+
 ChaosMonkey.prototype.nextMove = randomLegalMove;
 
 // Stategy: most simple Monte Carlo.
@@ -93,7 +97,12 @@ ChaosMonkey.prototype.nextMove = randomLegalMove;
 function SimpleMonteCarlo(color, tries) {
     this.color = color;
     this.tries = tries;
+    this.weightsHistory = [];
 }
+
+SimpleMonteCarlo.prototype.description = function() {
+    return "Simple Monte Carlo, " + this.tries + " tries";
+};
 
 SimpleMonteCarlo.prototype.nextMove = function(board) {
     var moveScores = initArray(WIDTH, 0);
@@ -110,7 +119,7 @@ SimpleMonteCarlo.prototype.nextMove = function(board) {
             moveScores[move] -= 1000;
         }
     }
-    // console.log(moveScores);
+    this.weightsHistory.push(moveScores);
     return moveScores.indexOf(Math.max.apply(null, moveScores));
 }
 ;
@@ -134,6 +143,7 @@ function Board() {
     this.board = init2DArray(WIDTH, HEIGHT, EMPTY);
     this.turn = RED;
     this.status = IN_PROGRESS;
+    this.moveHistory = [];
 }
 
 Board.prototype.clone = function() {
@@ -141,6 +151,7 @@ Board.prototype.clone = function() {
   b.board = clone2DArray(this.board);
   b.turn = this.turn;
   b.status = this.status;
+  b.moveHistory = this.moveHistory.clone();
   return b;
 };
 
@@ -176,6 +187,9 @@ Board.prototype._prettyStatus = function(status) {
 // destructive operation
 Board.prototype.makeMove = function(move) {
     if(!this.isLegalMove(move)) {
+        console.log(this.toString());
+        console.log(move);
+        console.log(this.turn);
         throw ERROR_ILLEGAL_MOVE;
     }
     var y = HEIGHT - 1;
@@ -183,6 +197,7 @@ Board.prototype.makeMove = function(move) {
         y--;
     }
     this.board[move][y] = this.turn;
+    this.moveHistory.push(move);
     this.status = this._calcStatus([move, y], this.turn);
     this.turn = this.turn == RED ? BLACK : RED;
     return this;
@@ -193,11 +208,7 @@ Board.prototype.isLegalMove = function(move) {
 };
 
 Board.prototype._calcStatus = function(pos, turn) {
-    if(this._isDrawn()) {
-        return DRAW;
-    }
     var winCode = turn == RED ? RED_WON : BLACK_WON;
-
     if(this._dirCheck(pos, turn, [0, -1]) >= 3) {
         return winCode;
     }
@@ -209,6 +220,10 @@ Board.prototype._calcStatus = function(pos, turn) {
     }
     if(this._dirCheck(pos, turn, [-1, 1]) + this._dirCheck(pos, turn, [1, -1]) >= 3) {
         return winCode;
+    }
+
+    if(this._isDrawn()) {
+        return DRAW;
     }
 
     return IN_PROGRESS;
@@ -229,18 +244,13 @@ Board.prototype._dirCheck = function(pos, turn, vec) {
 };
 
 Board.prototype._isDrawn = function() {
-    for(var x = 0; x < WIDTH; ++x) {
-        if(this.board[x][HEIGHT - 1] == EMPTY) {
-            return false;
-        }
-    }
-    return true;
+    return this.moveHistory.length >= WIDTH * HEIGHT;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
-// playerA is red and goes first
+// playerA must be red and will go first
 function playSingleGame(botA, botB) {
     var board = new Board();
     while(true) {
@@ -252,13 +262,51 @@ function playSingleGame(botA, botB) {
         if(board.status != IN_PROGRESS) {
             return board;
         }
-        // console.log(board.toString());
     }
 }
 
-var result = [];
-for(var i = 0; i < 100; ++i) {
-    var finalBoard = playSingleGame(new ChaosMonkey(RED), new SimpleMonteCarlo(BLACK, 100));
-    result.push(finalBoard.status);
+// The bot factory should take a single argument: color. Both bots will have
+// their chance to go first.
+function playManyGames(botFactoryA, botFactoryB, numOfGames) {
+    var gamesLog = [];
+    for(var i = 0; i < numOfGames; ++i) {
+        var red, black, winner, loser;
+        if(Math.random() < 0.5) {
+            red = botFactoryA(RED);
+            black = botFactoryB(BLACK);
+        } else {
+            red = botFactoryB(RED);
+            black = botFactoryA(BLACK);
+        }
+        var board = playSingleGame(red, black);
+        if(board.status == RED_WON) {
+            winner = red;
+            loser = black;
+        } else if(board.status == BLACK_WON) {
+            winner = black;
+            loser = red;
+        } else if(board.status == DRAW) {
+            winner = DRAW;
+            loser = DRAW;
+        }
+        gamesLog.push({winner: winner, loser: loser, board: board});
+    }
+    return gamesLog;
 }
-console.log(result.join(''));
+
+function summarizeGames(games) {
+    var totals = {};
+    for(var i = 0; i < games.length; ++i) {
+        var winnerKey = games[i].winner.description();
+        if(!(winnerKey in totals)) {
+            totals[winnerKey] = 0;
+        }
+        totals[winnerKey]++;
+    }
+    return totals;
+}
+
+var monkey = function(color) { return new ChaosMonkey(color) ; };
+var smc100 = function(color) { return new SimpleMonteCarlo(color, 100); };
+var games = playManyGames(monkey, smc100, 1000);
+console.log(summarizeGames(games));
