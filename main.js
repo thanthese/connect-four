@@ -47,6 +47,14 @@ function init2DArray(width, height, value) {
     return array;
 }
 
+function incKey(obj, key) {
+    if(!(key in obj)) {
+        obj[key] = 0;
+    }
+    obj[key]++;
+    return obj;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //// playing algorithms
 
@@ -270,26 +278,33 @@ function playSingleGame(botA, botB) {
 function playManyGames(botFactoryA, botFactoryB, numOfGames) {
     var gamesLog = [];
     for(var i = 0; i < numOfGames; ++i) {
-        var red, black, winner, loser;
+        var red, black, winner, loser, playerAisRed, winnerId;
         if(Math.random() < 0.5) {
             red = botFactoryA(RED);
             black = botFactoryB(BLACK);
+            playerAisRed = true;
         } else {
             red = botFactoryB(RED);
             black = botFactoryA(BLACK);
+            playerAisRed = false;
         }
         var board = playSingleGame(red, black);
         if(board.status == RED_WON) {
             winner = red;
             loser = black;
+            winnerId = playerAisRed ? 1 : 2;
         } else if(board.status == BLACK_WON) {
             winner = black;
             loser = red;
-        } else if(board.status == DRAW) {
+            winnerId = playerAisRed ? 2 : 1;
+        } else {
             winner = DRAW;
             loser = DRAW;
+            winnerId = 0;
         }
-        gamesLog.push({winner: winner, loser: loser, board: board});
+        gamesLog.push({winnerId: winnerId,
+            winner: winner, loser: loser,
+            board: board});
     }
     return gamesLog;
 }
@@ -297,16 +312,19 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
 function summarizeGames(games) {
     var totals = {};
     for(var i = 0; i < games.length; ++i) {
-        var winnerKey = games[i].winner.description();
-        if(!(winnerKey in totals)) {
-            totals[winnerKey] = 0;
+        if(games[i].winner === DRAW) {
+            incKey(totals, "draw");
+        } else {
+            incKey(totals, games[i].winner.description());
         }
-        totals[winnerKey]++;
     }
     return totals;
 }
 
+// bot factories
 var monkey = function(color) { return new ChaosMonkey(color) ; };
 var smc100 = function(color) { return new SimpleMonteCarlo(color, 100); };
-var games = playManyGames(monkey, smc100, 1000);
-console.log(summarizeGames(games));
+var smc200 = function(color) { return new SimpleMonteCarlo(color, 200); };
+
+console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
+// console.log(summarizeGames(playManyGames(monkey, smc200, 1000)));
