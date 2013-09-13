@@ -56,94 +56,6 @@ function incKey(obj, key) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//// playing algorithms
-
-function randomMove() {
-    return Math.floor(WIDTH * Math.random());
-}
-
-function randomLegalMove(board) {
-    var move = randomMove();
-    var tries = 100;
-    while(!board.isLegalMove(move)) {
-        move = randomMove();
-        tries--;
-        if(tries < 0) {
-            throw ERROR_NO_LEGAL_MOVES_FOUND;
-        }
-    }
-    return move;
-}
-
-function oppositeColor(color) {
-    return color == RED ? BLACK : RED;
-}
-
-function IWon(myColor, boardStatus) {
-    return (myColor == RED && boardStatus == RED_WON)
-        || (myColor == BLACK && boardStatus == BLACK_WON);
-}
-
-function ILost(myColor, boardStatus) {
-    return (myColor == RED && boardStatus == BLACK_WON)
-        || (myColor == BLACK && boardStatus == RED_WON);
-}
-
-// Strategy: make any random legal move
-function ChaosMonkey(color) {
-    this.color = color;
-}
-
-ChaosMonkey.prototype.description = function() {
-    return "Chaos Monkey";
-};
-
-ChaosMonkey.prototype.nextMove = randomLegalMove;
-
-// Stategy: most simple Monte Carlo.
-// Can configure number of simulations to run.
-function SimpleMonteCarlo(color, tries) {
-    this.color = color;
-    this.tries = tries;
-    this.weightsHistory = [];
-}
-
-SimpleMonteCarlo.prototype.description = function() {
-    return "Simple Monte Carlo, " + this.tries + " tries";
-};
-
-SimpleMonteCarlo.prototype.nextMove = function(board) {
-    var moveScores = initArray(WIDTH, 0);
-    for(var t = 0; t < this.tries; ++t) {
-        var move = randomMove();
-        var finalStatus = this.simulateFromMoveToEndOfGame(board, move);
-        if(finalStatus == DRAW) {
-            moveScores[move] += 0;
-        } else if(IWon(this.color, finalStatus)) {
-            moveScores[move]++;
-        } else if(ILost(this.color, finalStatus)) {
-           moveScores[move]--;
-        } else if(finalStatus == ERROR_ILLEGAL_MOVE) {
-            moveScores[move] -= 1000;
-        }
-    }
-    this.weightsHistory.push(moveScores);
-    return moveScores.indexOf(Math.max.apply(null, moveScores));
-}
-;
-SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
-    if(!board.isLegalMove(moveToTest)) {
-        return ERROR_ILLEGAL_MOVE;
-    }
-    var b = board.clone();
-    b.makeMove(moveToTest);
-    while(b.status == IN_PROGRESS) {
-        b.makeMove(randomLegalMove(b));
-    }
-    return b.status;
-};
-
-///////////////////////////////////////////////////////////////////////////////
 //// Connect Four logic
 
 function Board() {
@@ -256,7 +168,95 @@ Board.prototype._isDrawn = function() {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-//// main
+//// playing algorithms
+
+function randomMove() {
+    return Math.floor(WIDTH * Math.random());
+}
+
+function randomLegalMove(board) {
+    var move = randomMove();
+    var tries = 100;
+    while(!board.isLegalMove(move)) {
+        move = randomMove();
+        tries--;
+        if(tries < 0) {
+            throw ERROR_NO_LEGAL_MOVES_FOUND;
+        }
+    }
+    return move;
+}
+
+function oppositeColor(color) {
+    return color == RED ? BLACK : RED;
+}
+
+function IWon(myColor, boardStatus) {
+    return (myColor == RED && boardStatus == RED_WON)
+        || (myColor == BLACK && boardStatus == BLACK_WON);
+}
+
+function ILost(myColor, boardStatus) {
+    return (myColor == RED && boardStatus == BLACK_WON)
+        || (myColor == BLACK && boardStatus == RED_WON);
+}
+
+// Strategy: make any random legal move
+function ChaosMonkey(color) {
+    this.color = color;
+}
+
+ChaosMonkey.prototype.description = function() {
+    return "Chaos Monkey";
+};
+
+ChaosMonkey.prototype.nextMove = randomLegalMove;
+
+// Stategy: most simple Monte Carlo.
+// Can configure number of simulations to run.
+function SimpleMonteCarlo(color, tries) {
+    this.color = color;
+    this.tries = tries;
+    this.weightsHistory = [];
+}
+
+SimpleMonteCarlo.prototype.description = function() {
+    return "Simple Monte Carlo, " + this.tries + " tries";
+};
+
+SimpleMonteCarlo.prototype.nextMove = function(board) {
+    var moveScores = initArray(WIDTH, 0);
+    for(var t = 0; t < this.tries; ++t) {
+        var move = randomMove();
+        var finalStatus = this.simulateFromMoveToEndOfGame(board, move);
+        if(finalStatus == DRAW) {
+            moveScores[move] += 0;
+        } else if(IWon(this.color, finalStatus)) {
+            moveScores[move]++;
+        } else if(ILost(this.color, finalStatus)) {
+           moveScores[move]--;
+        } else if(finalStatus == ERROR_ILLEGAL_MOVE) {
+            moveScores[move] -= 1000;
+        }
+    }
+    this.weightsHistory.push(moveScores);
+    return moveScores.indexOf(Math.max.apply(null, moveScores));
+}
+;
+SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
+    if(!board.isLegalMove(moveToTest)) {
+        return ERROR_ILLEGAL_MOVE;
+    }
+    var b = board.clone();
+    b.makeMove(moveToTest);
+    while(b.status == IN_PROGRESS) {
+        b.makeMove(randomLegalMove(b));
+    }
+    return b.status;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//// running games
 
 // playerA must be red and will go first
 function playSingleGame(botA, botB) {
@@ -320,6 +320,9 @@ function summarizeGames(games) {
     }
     return totals;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//// main
 
 // bot factories
 var monkey = function(color) { return new ChaosMonkey(color) ; };
