@@ -88,7 +88,7 @@ function ChaosMonkey(color) {
 
 ChaosMonkey.prototype.nextMove = randomLegalMove;
 
-// Stategy: most simple Monte Carlo. 
+// Stategy: most simple Monte Carlo.
 // Can configure number of simulations to run.
 function SimpleMonteCarlo(color, tries) {
     this.color = color;
@@ -99,14 +99,14 @@ SimpleMonteCarlo.prototype.nextMove = function(board) {
     var moveScores = initArray(WIDTH, 0);
     for(var t = 0; t < this.tries; ++t) {
         var move = randomMove();
-        var result = this.simulateFromMoveToEndOfGame(board, move);
-        if(result == DRAW) {
+        var finalStatus = this.simulateFromMoveToEndOfGame(board, move);
+        if(finalStatus == DRAW) {
             moveScores[move] += 0;
-        } else if(IWon(this.color, result)) {
+        } else if(IWon(this.color, finalStatus)) {
             moveScores[move]++;
-        } else if(ILost(this.color, result)) {
-           moveScores[move]--; 
-        } else if(result == ERROR_ILLEGAL_MOVE) {
+        } else if(ILost(this.color, finalStatus)) {
+           moveScores[move]--;
+        } else if(finalStatus == ERROR_ILLEGAL_MOVE) {
             moveScores[move] -= 1000;
         }
     }
@@ -114,7 +114,7 @@ SimpleMonteCarlo.prototype.nextMove = function(board) {
     return moveScores.indexOf(Math.max.apply(null, moveScores));
 }
 ;
-SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function (board, moveToTest) {
+SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
     if(!board.isLegalMove(moveToTest)) {
         return ERROR_ILLEGAL_MOVE;
     }
@@ -170,7 +170,7 @@ Board.prototype._prettyStatus = function(status) {
             return "draw";
         case IN_PROGRESS:
             return "in progress...";
-    }  
+    }
 };
 
 // destructive operation
@@ -197,7 +197,7 @@ Board.prototype._calcStatus = function(pos, turn) {
         return DRAW;
     }
     var winCode = turn == RED ? RED_WON : BLACK_WON;
-    
+
     if(this._dirCheck(pos, turn, [0, -1]) >= 3) {
         return winCode;
     }
@@ -214,13 +214,13 @@ Board.prototype._calcStatus = function(pos, turn) {
     return IN_PROGRESS;
 };
 
-// Starting from a position on the board, and given a direction, return 
+// Starting from a position on the board, and given a direction, return
 // how many pieces of a given color are in that direction in a row.
 Board.prototype._dirCheck = function(pos, turn, vec) {
     for(var factor = 1; factor <= 3; ++factor) {
         var x = pos[0] + vec[0] * factor;
         var y = pos[1] + vec[1] * factor;
-        if(x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1 
+        if(x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1
                 || this.board[x][y] != turn) {
             return factor - 1;
         }
@@ -241,7 +241,7 @@ Board.prototype._isDrawn = function() {
 //// main
 
 // playerA is red and goes first
-function playSingleGame(botA, botB) { 
+function playSingleGame(botA, botB) {
     var board = new Board();
     while(true) {
         board.makeMove(botA.nextMove(board));
@@ -256,7 +256,9 @@ function playSingleGame(botA, botB) {
     }
 }
 
+var result = [];
 for(var i = 0; i < 100; ++i) {
     var finalBoard = playSingleGame(new ChaosMonkey(RED), new SimpleMonteCarlo(BLACK, 100));
-    console.log(finalBoard.status);   
+    result.push(finalBoard.status);
 }
+console.log(result.join(''));
