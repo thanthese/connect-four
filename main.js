@@ -209,6 +209,23 @@ ChaosMonkey.prototype.description = function() {
 
 ChaosMonkey.prototype.nextMove = randomLegalMove;
 
+function Lefty(color) {
+    this.color = color;
+}
+
+// Strategy: make left-most legal move
+Lefty.prototype.description = function() {
+    return "Lefty";
+};
+
+Lefty.prototype.nextMove = function(board) {
+    for(var x = 0; x < WIDTH; ++x) {
+        if(board.isLegalMove(x)) {
+            return x;
+        }
+    }
+};
+
 // Stategy: most simple Monte Carlo.
 // Can configure number of simulations to run.
 function SimpleMonteCarlo(color, tries) {
@@ -238,8 +255,8 @@ SimpleMonteCarlo.prototype.nextMove = function(board) {
     }
     this.weightsHistory.push(moveScores);
     return moveScores.indexOf(Math.max.apply(null, moveScores));
-}
-;
+};
+
 SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
     if(!board.isLegalMove(moveToTest)) {
         return ERROR_ILLEGAL_MOVE;
@@ -250,6 +267,51 @@ SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToT
         b.makeMove(randomLegalMove(b));
     }
     return b.status;
+};
+
+function DepthMatters(color, tries) {
+    this.color = color;
+    this.tries = tries;
+    this.weightsHistory = [];
+}
+
+DepthMatters.prototype.description = function() {
+    return "Depth Matters, " + this.tries + " tries";
+};
+
+DepthMatters.prototype.nextMove = function(board) {
+    var moveScores = initArray(WIDTH, 0);
+    for(var t = 0; t < this.tries; ++t) {
+        var move = randomMove();
+        var finalBoard = this.simulateFromMoveToEndOfGame(board, move);
+        if(finalBoard == ERROR_ILLEGAL_MOVE) {
+            moveScores[move] -= 1000;
+        } else if(IWon(this.color, finalBoard.status)) {
+            moveScores[move]++;
+        } else if(ILost(this.color, finalBoard.status)) {
+            if(finalBoard.moveHistory.length - board.moveHistory.length < 3) {
+                moveScores[move] -= 100;
+            } else {
+                moveScores[move]--;
+            }
+        } else if(finalBoard.status == DRAW) {
+            moveScores[move] += 0;
+        }
+    }
+    this.weightsHistory.push(moveScores);
+    return moveScores.indexOf(Math.max.apply(null, moveScores));
+};
+
+DepthMatters.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
+    if(!board.isLegalMove(moveToTest)) {
+        return ERROR_ILLEGAL_MOVE;
+    }
+    var b = board.clone();
+    b.makeMove(moveToTest);
+    while(b.status == IN_PROGRESS) {
+        b.makeMove(randomLegalMove(b));
+    }
+    return b;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -325,15 +387,26 @@ function summarizeGames(games) {
 // find an example of a bot losing to another bot
 function findLoss(botFactoryA, botFactoryB, desiredLoserId) {
     var game;
+    var attempts = 0;
     do {
         game = playManyGames(botFactoryA, botFactoryB, 1)[0];
+        attempts++;
     } while(game.winnerId == desiredLoserId);
+    console.log("Lost game found in " + attempts + " attempts.");
     return game;
 }
 
 // print the blow-by-blow, with weight statistics, of a
 // monte carlo algorithm loss
 function replayMonteCarloLoss(game) {
+    _replayMonteCarlo(game, "loser");
+}
+
+function replayMonteCarloWin(game) {
+    _replayMonteCarlo(game, "winner");
+}
+
+function _replayMonteCarlo(game, winnerOrLoser) {
     var board = new Board();
     var weightsTurn = 0;
     console.log(game);
@@ -341,8 +414,8 @@ function replayMonteCarloLoss(game) {
     for(var i = 0; i < game.board.moveHistory.length; ++i) {
         board.makeMove(game.board.moveHistory[i]);
         console.log(board.toString());
-        if(board.turn == game.loser.color && board.status == IN_PROGRESS) {
-            console.log(game.loser.weightsHistory[weightsTurn]);
+        if(board.turn == game[winnerOrLoser].color && board.status == IN_PROGRESS) {
+            console.log(game[winnerOrLoser].weightsHistory[weightsTurn]);
             weightsTurn++;
         }
     }
@@ -352,11 +425,23 @@ function replayMonteCarloLoss(game) {
 //// main
 
 // bot factories
-var monkey = function(color) { return new ChaosMonkey(color) ; };
+var monkey = function(color) { return new ChaosMonkey(color); };
+var lefty = function(color) { return new Lefty(color); };
 var smc100 = function(color) { return new SimpleMonteCarlo(color, 100); };
 var smc200 = function(color) { return new SimpleMonteCarlo(color, 200); };
+var smc300 = function(color) { return new SimpleMonteCarlo(color, 300); };
+var depth100 = function(color) { return new DepthMatters(color, 100); };
+var depth300 = function(color) { return new DepthMatters(color, 300); };
+
+console.time("main");
 
 // console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
 // console.log(summarizeGames(playManyGames(monkey, smc200, 1000)));
+console.log(summarizeGames(playManyGames(depth300, monkey, 500)));
+console.log(summarizeGames(playManyGames(depth300, lefty, 500)));
+console.log(summarizeGames(playManyGames(depth300, smc100, 500)));
+console.log(summarizeGames(playManyGames(depth300, smc300, 500)));
 
-replayMonteCarloLoss(findLoss(monkey, smc100, 2));
+// replayMonteCarloWin(findLoss(monkey, depth100, 1));
+
+console.timeEnd("main");
