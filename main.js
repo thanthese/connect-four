@@ -67,12 +67,12 @@ function Board() {
 }
 
 Board.prototype.clone = function() {
-  var b = new Board();
-  b.board = clone2DArray(this.board);
-  b.turn = this.turn;
-  b.status = this.status;
-  b.moveHistory = this.moveHistory.clone();
-  return b;
+    var b = new Board();
+    b.board = clone2DArray(this.board);
+    b.turn = this.turn;
+    b.status = this.status;
+    b.moveHistory = this.moveHistory.clone();
+    return b;
 };
 
 Board.prototype.toString = function() {
@@ -107,9 +107,6 @@ Board.prototype._prettyStatus = function(status) {
 // destructive operation
 Board.prototype.makeMove = function(move) {
     if(!this.isLegalMove(move)) {
-        console.log(this.toString());
-        console.log(move);
-        console.log(this.turn);
         throw ERROR_ILLEGAL_MOVE;
     }
     var y = HEIGHT - 1;
@@ -124,7 +121,7 @@ Board.prototype.makeMove = function(move) {
 };
 
 Board.prototype.isLegalMove = function(move) {
-  return this.board[move][HEIGHT - 1] == EMPTY;
+    return this.board[move][HEIGHT - 1] == EMPTY;
 };
 
 Board.prototype._calcStatus = function(pos, turn) {
@@ -309,6 +306,10 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
     return gamesLog;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//// analysis tools
+
+// generate high-level totals of who won how many games
 function summarizeGames(games) {
     var totals = {};
     for(var i = 0; i < games.length; ++i) {
@@ -321,6 +322,32 @@ function summarizeGames(games) {
     return totals;
 }
 
+// find an example of a bot losing to another bot
+function findLoss(botFactoryA, botFactoryB, desiredLoserId) {
+    var game;
+    do {
+        game = playManyGames(botFactoryA, botFactoryB, 1)[0];
+    } while(game.winnerId == desiredLoserId);
+    return game;
+}
+
+// print the blow-by-blow, with weight statistics, of a
+// monte carlo algorithm loss
+function replayMonteCarloLoss(game) {
+    var board = new Board();
+    var weightsTurn = 0;
+    console.log(game);
+    console.log(board.toString());
+    for(var i = 0; i < game.board.moveHistory.length; ++i) {
+        board.makeMove(game.board.moveHistory[i]);
+        console.log(board.toString());
+        if(board.turn == game.loser.color && board.status == IN_PROGRESS) {
+            console.log(game.loser.weightsHistory[weightsTurn]);
+            weightsTurn++;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
@@ -329,5 +356,7 @@ var monkey = function(color) { return new ChaosMonkey(color) ; };
 var smc100 = function(color) { return new SimpleMonteCarlo(color, 100); };
 var smc200 = function(color) { return new SimpleMonteCarlo(color, 200); };
 
-console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
+// console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
 // console.log(summarizeGames(playManyGames(monkey, smc200, 1000)));
+
+replayMonteCarloLoss(findLoss(monkey, smc100, 2));
