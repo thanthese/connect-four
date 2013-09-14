@@ -369,6 +369,39 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//// human wants to play, too
+
+function HumanGame(botFactory, humanGoesFirst) {
+    this.board = new Board();
+    this.opponent = botFactory(humanGoesFirst ? BLACK : RED);
+    this.color = humanGoesFirst ? RED : BLACK;
+    if(!humanGoesFirst) {
+        this._makeBotMove();
+    }
+    this._showBoard();
+}
+
+HumanGame.prototype.move = function(move) {
+    this.board.makeMove(move);
+    this._showBoard();
+    if(this.board.status == IN_PROGRESS) {
+        this._makeBotMove();
+        this._showBoard();
+    }
+};
+
+HumanGame.prototype._makeBotMove = function() {
+    var move = this.opponent.nextMove(this.board);
+    this.board.makeMove(move);
+    console.log("Bot moved at: " + move);
+};
+
+HumanGame.prototype._showBoard = function() {
+    console.log("You are: " + this.color);
+    console.log(this.board.toString());
+};
+
+///////////////////////////////////////////////////////////////////////////////
 //// analysis tools
 
 // generate high-level totals of who won how many games
@@ -432,15 +465,17 @@ var smc200 = function(color) { return new SimpleMonteCarlo(color, 200); };
 var smc300 = function(color) { return new SimpleMonteCarlo(color, 300); };
 var depth100 = function(color) { return new DepthMatters(color, 100); };
 var depth300 = function(color) { return new DepthMatters(color, 300); };
+var depth10k = function(color) { return new DepthMatters(color, 10000); };
+var depth50k = function(color) { return new DepthMatters(color, 50000); };
 
 console.time("main");
 
 // console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
 // console.log(summarizeGames(playManyGames(monkey, smc200, 1000)));
-console.log(summarizeGames(playManyGames(depth300, monkey, 500)));
-console.log(summarizeGames(playManyGames(depth300, lefty, 500)));
-console.log(summarizeGames(playManyGames(depth300, smc100, 500)));
-console.log(summarizeGames(playManyGames(depth300, smc300, 500)));
+// console.log(summarizeGames(playManyGames(depth300, monkey, 500)));
+// console.log(summarizeGames(playManyGames(depth300, lefty, 500)));
+// console.log(summarizeGames(playManyGames(depth300, smc100, 500)));
+// console.log(summarizeGames(playManyGames(depth300, smc300, 500)));
 
 // replayMonteCarloWin(findLoss(monkey, depth100, 1));
 
