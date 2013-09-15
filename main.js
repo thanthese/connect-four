@@ -455,12 +455,13 @@ var smc50k = function(color) { return new MonteCarlo(color, 50000, 0, 0, 0); };
 var depth100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100); };
 var depth300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100); };
 var depth50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100); };
+var depth1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100); };
 
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
 function main() {
-    console.log(summarizeMatches(battleRoyale([monkey, lefty, smc100, smc300, depth100, depth300], 100)));
+    console.log(summarizeMatches(battleRoyale([lefty, depth300], 100)));
 }
 
 console.time("main");
