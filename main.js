@@ -394,11 +394,17 @@ HumanGame.prototype._showBoard = function() {
 
 // generate high-level totals of who won how many games
 function summarizeGames(games) {
-    var totals = {};
+    var totals = {red: 0, black: 0};
     for(var i = 0; i < games.length; ++i) {
         if(games[i].winner === DRAW) {
             incKey(totals, "draw");
         } else {
+            if(games[i].winner.color == RED) {
+                totals.red++;
+            }
+            if(games[i].winner.color == BLACK) {
+                totals.black++;
+            }
             incKey(totals, games[i].winner.description());
             var loserDesc = games[i].loser.description();
             if(!(loserDesc in totals)) {
@@ -478,7 +484,7 @@ var parity1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100
 //// main
 
 function main() {
-    // console.log(summarizeMatches(battleRoyale([depth300, parity300], 100)));
+    console.log(summarizeMatches(battleRoyale([depth300, depth300], 1000)));
 }
 
 console.time("main");
