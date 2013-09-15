@@ -177,7 +177,7 @@ function randomMove() {
 
 function randomLegalMove(board) {
     var move = randomMove();
-    var tries = 100;
+    var tries = 200;
     while(!board.isLegalMove(move)) {
         move = randomMove();
         tries--;
