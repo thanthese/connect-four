@@ -482,5 +482,5 @@ function main() {
 }
 
 console.time("main");
-main();
+// main();
 console.timeEnd("main");
