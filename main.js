@@ -20,7 +20,7 @@ var ERROR_NO_LEGAL_MOVES_FOUND = 1;
 //// game-agnostic primatives
 
 Array.prototype.clone = function() {
-	return this.slice(0);
+    return this.slice(0);
 };
 
 function clone2DArray(array) {
@@ -209,11 +209,11 @@ ChaosMonkey.prototype.description = function() {
 
 ChaosMonkey.prototype.nextMove = randomLegalMove;
 
+// Strategy: make left-most legal move
 function Lefty(color) {
     this.color = color;
 }
 
-// Strategy: make left-most legal move
 Lefty.prototype.description = function() {
     return "Lefty";
 };
@@ -226,83 +226,48 @@ Lefty.prototype.nextMove = function(board) {
     }
 };
 
-// Stategy: most simple Monte Carlo.
-// Can configure number of simulations to run.
-function SimpleMonteCarlo(color, tries) {
+// Strategy: Monte Carlo
+// - tries: number of simulations to run per turn
+// - depth: at what move depth into the future to apply bonuses
+// - bonuses: how much more strongly to score wins and losses
+function MonteCarlo(color, tries, depth, winBonus, lossBonus) {
     this.color = color;
     this.tries = tries;
     this.weightsHistory = [];
+    this.depth = depth;
+    this.winBonus = winBonus;
+    this.lossBonus = lossBonus;
+    this.illegalBonus = 1000;
 }
 
-SimpleMonteCarlo.prototype.description = function() {
-    return "Simple Monte Carlo, " + this.tries + " tries";
+MonteCarlo.prototype.description = function() {
+    return "Depth Matters 2: #" + this.tries
+        + " D" + this.depth
+        + " W" + this.winBonus
+        + " L" + this.lossBonus;
 };
 
-SimpleMonteCarlo.prototype.nextMove = function(board) {
-    var moveScores = initArray(WIDTH, 0);
-    for(var t = 0; t < this.tries; ++t) {
-        var move = randomMove();
-        var finalStatus = this.simulateFromMoveToEndOfGame(board, move);
-        if(finalStatus == DRAW) {
-            moveScores[move] += 0;
-        } else if(IWon(this.color, finalStatus)) {
-            moveScores[move]++;
-        } else if(ILost(this.color, finalStatus)) {
-           moveScores[move]--;
-        } else if(finalStatus == ERROR_ILLEGAL_MOVE) {
-            moveScores[move] -= 1000;
-        }
-    }
-    this.weightsHistory.push(moveScores);
-    return moveScores.indexOf(Math.max.apply(null, moveScores));
-};
-
-SimpleMonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
-    if(!board.isLegalMove(moveToTest)) {
-        return ERROR_ILLEGAL_MOVE;
-    }
-    var b = board.clone();
-    b.makeMove(moveToTest);
-    while(b.status == IN_PROGRESS) {
-        b.makeMove(randomLegalMove(b));
-    }
-    return b.status;
-};
-
-function DepthMatters(color, tries) {
-    this.color = color;
-    this.tries = tries;
-    this.weightsHistory = [];
-}
-
-DepthMatters.prototype.description = function() {
-    return "Depth Matters, " + this.tries + " tries";
-};
-
-DepthMatters.prototype.nextMove = function(board) {
+MonteCarlo.prototype.nextMove = function(board) {
     var moveScores = initArray(WIDTH, 0);
     for(var t = 0; t < this.tries; ++t) {
         var move = randomMove();
         var finalBoard = this.simulateFromMoveToEndOfGame(board, move);
         if(finalBoard == ERROR_ILLEGAL_MOVE) {
-            moveScores[move] -= 1000;
-        } else if(IWon(this.color, finalBoard.status)) {
-            moveScores[move]++;
+            moveScores[move] -= this.illegalBonus;
+            continue;
+        }
+        var depth = finalBoard.moveHistory.length - board.moveHistory.length;
+        if(IWon(this.color, finalBoard.status)) {
+            moveScores[move] += depth <= this.depth ? this.winBonus : 1;
         } else if(ILost(this.color, finalBoard.status)) {
-            if(finalBoard.moveHistory.length - board.moveHistory.length < 3) {
-                moveScores[move] -= 100;
-            } else {
-                moveScores[move]--;
-            }
-        } else if(finalBoard.status == DRAW) {
-            moveScores[move] += 0;
+            moveScores[move] -= depth <= this.depth ? this.lossBonus : 1;
         }
     }
     this.weightsHistory.push(moveScores);
     return moveScores.indexOf(Math.max.apply(null, moveScores));
 };
 
-DepthMatters.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
+MonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
     if(!board.isLegalMove(moveToTest)) {
         return ERROR_ILLEGAL_MOVE;
     }
@@ -368,6 +333,18 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
     return gamesLog;
 }
 
+// Pit all bots against each other in all possible combinations. For each
+// match, play numOfGames.
+function battleRoyale(botFactories, numOfGames) {
+    var matches = [];
+    for(var i = 0; i < botFactories.length; ++i) {
+        for(var j = i + 1; j < botFactories.length; ++j) {
+            matches.push(playManyGames(botFactories[i], botFactories[j], numOfGames));
+        }
+    }
+    return matches;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //// human wants to play, too
 
@@ -412,9 +389,17 @@ function summarizeGames(games) {
             incKey(totals, "draw");
         } else {
             incKey(totals, games[i].winner.description());
+            var loserDesc = games[i].loser.description();
+            if(!(loserDesc in totals)) {
+                totals[loserDesc] = 0;
+            }
         }
     }
     return totals;
+}
+
+function summarizeMatches(matches) {
+    return matches.map(summarizeGames);
 }
 
 // find an example of a bot losing to another bot
@@ -455,28 +440,29 @@ function _replayMonteCarlo(game, winnerOrLoser) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//// main
+//// bot factories
 
-// bot factories
+// controls
 var monkey = function(color) { return new ChaosMonkey(color); };
 var lefty = function(color) { return new Lefty(color); };
-var smc100 = function(color) { return new SimpleMonteCarlo(color, 100); };
-var smc200 = function(color) { return new SimpleMonteCarlo(color, 200); };
-var smc300 = function(color) { return new SimpleMonteCarlo(color, 300); };
-var depth100 = function(color) { return new DepthMatters(color, 100); };
-var depth300 = function(color) { return new DepthMatters(color, 300); };
-var depth10k = function(color) { return new DepthMatters(color, 10000); };
-var depth50k = function(color) { return new DepthMatters(color, 50000); };
+
+// simple monte carlo
+var smc100 = function(color) { return new MonteCarlo(color, 100, 0, 0, 0); };
+var smc300 = function(color) { return new MonteCarlo(color, 300, 0, 0, 0); };
+var smc50k = function(color) { return new MonteCarlo(color, 50000, 0, 0, 0); };
+
+// depth, with loss bonus
+var depth100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100); };
+var depth300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100); };
+var depth50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100); };
+
+///////////////////////////////////////////////////////////////////////////////
+//// main
+
+function main() {
+    console.log(summarizeMatches(battleRoyale([monkey, lefty, smc100, smc300, depth100, depth300], 100)));
+}
 
 console.time("main");
-
-// console.log(summarizeGames(playManyGames(smc100, smc200, 1000)));
-// console.log(summarizeGames(playManyGames(monkey, smc200, 1000)));
-// console.log(summarizeGames(playManyGames(depth300, monkey, 500)));
-// console.log(summarizeGames(playManyGames(depth300, lefty, 500)));
-// console.log(summarizeGames(playManyGames(depth300, smc100, 500)));
-// console.log(summarizeGames(playManyGames(depth300, smc300, 500)));
-
-// replayMonteCarloWin(findLoss(monkey, depth100, 1));
-
+main();
 console.timeEnd("main");
