@@ -55,6 +55,10 @@ function incKey(obj, key) {
     return obj;
 }
 
+function isEven(n) {
+    return n % 2 === 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //// Connect Four logic
 
@@ -114,7 +118,7 @@ Board.prototype.makeMove = function(move) {
         y--;
     }
     this.board[move][y] = this.turn;
-    this.moveHistory.push(move);
+    this.moveHistory.push([move, y]);
     this.status = this._calcStatus([move, y], this.turn);
     this.turn = this.turn == RED ? BLACK : RED;
     return this;
@@ -230,13 +234,14 @@ Lefty.prototype.nextMove = function(board) {
 // - tries: number of simulations to run per turn
 // - depth: at what move depth into the future to apply bonuses
 // - bonuses: how much more strongly to score wins and losses
-function MonteCarlo(color, tries, depth, winBonus, lossBonus) {
+function MonteCarlo(color, tries, depth, winBonus, lossBonus, parityBonus) {
     this.color = color;
     this.tries = tries;
     this.weightsHistory = [];
     this.depth = depth;
     this.winBonus = winBonus;
     this.lossBonus = lossBonus;
+    this.parityBonus = parityBonus;
     this.illegalBonus = 1000;
 }
 
@@ -244,7 +249,8 @@ MonteCarlo.prototype.description = function() {
     return "Depth Matters 2: #" + this.tries
         + " D" + this.depth
         + " W" + this.winBonus
-        + " L" + this.lossBonus;
+        + " L" + this.lossBonus
+        + " P" + this.parityBonus;
 };
 
 MonteCarlo.prototype.nextMove = function(board) {
@@ -259,6 +265,11 @@ MonteCarlo.prototype.nextMove = function(board) {
         var depth = finalBoard.moveHistory.length - board.moveHistory.length;
         if(IWon(this.color, finalBoard.status)) {
             moveScores[move] += depth <= this.depth ? this.winBonus : 1;
+            var winningMoveRow = finalBoard.moveHistory[finalBoard.moveHistory.length - 1][1];
+            if((this.color == BLACK && isEven(winningMoveRow))
+                    || (this.color == RED && !isEven(winningMoveRow))) {
+                moveScores[move] += this.parityBonus;
+            }
         } else if(ILost(this.color, finalBoard.status)) {
             moveScores[move] -= depth <= this.depth ? this.lossBonus : 1;
         }
@@ -430,7 +441,7 @@ function _replayMonteCarlo(game, winnerOrLoser) {
     console.log(game);
     console.log(board.toString());
     for(var i = 0; i < game.board.moveHistory.length; ++i) {
-        board.makeMove(game.board.moveHistory[i]);
+        board.makeMove(game.board.moveHistory[i][0]);
         console.log(board.toString());
         if(board.turn == game[winnerOrLoser].color && board.status == IN_PROGRESS) {
             console.log(game[winnerOrLoser].weightsHistory[weightsTurn]);
@@ -447,21 +458,27 @@ var monkey = function(color) { return new ChaosMonkey(color); };
 var lefty = function(color) { return new Lefty(color); };
 
 // simple monte carlo
-var smc100 = function(color) { return new MonteCarlo(color, 100, 0, 0, 0); };
-var smc300 = function(color) { return new MonteCarlo(color, 300, 0, 0, 0); };
-var smc50k = function(color) { return new MonteCarlo(color, 50000, 0, 0, 0); };
+var smc100 = function(color) { return new MonteCarlo(color, 100, 0, 0, 0, 0); };
+var smc300 = function(color) { return new MonteCarlo(color, 300, 0, 0, 0, 0); };
+var smc50k = function(color) { return new MonteCarlo(color, 50000, 0, 0, 0, 0); };
 
 // depth, with loss bonus
-var depth100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100); };
-var depth300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100); };
-var depth50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100); };
-var depth1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100); };
+var depth100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100, 0); };
+var depth300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100, 0); };
+var depth50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100, 0); };
+var depth1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100, 0); };
+
+// parity
+var parity100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100, 2); };
+var parity300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100, 2); };
+var parity50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100, 2); };
+var parity1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100, 2); };
 
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
 function main() {
-    console.log(summarizeMatches(battleRoyale([lefty, depth300], 100)));
+    console.log(summarizeMatches(battleRoyale([depth300, parity300], 100)));
 }
 
 console.time("main");
