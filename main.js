@@ -478,9 +478,9 @@ var parity1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100
 //// main
 
 function main() {
-    console.log(summarizeMatches(battleRoyale([depth300, parity300], 100)));
+    // console.log(summarizeMatches(battleRoyale([depth300, parity300], 100)));
 }
 
 console.time("main");
-// main();
+main();
 console.timeEnd("main");
