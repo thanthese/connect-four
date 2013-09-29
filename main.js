@@ -14,13 +14,31 @@ var BLACK_WON = 2;
 var DRAW = 3;
 
 var ERROR_ILLEGAL_MOVE = 0;
-var ERROR_NO_LEGAL_MOVES_FOUND = 1;
+var ERROR_NO_LEGAL_MOVES = 1;
+
+var LOGGING = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 //// game-agnostic primatives
 
 Array.prototype.clone = function() {
     return this.slice(0);
+};
+
+Array.prototype.last = function() {
+    return this[this.length - 1];
+};
+
+Array.prototype.tail = function() {
+    var array = [];
+    for(var i = 1; i < this.length; ++i) {
+        array.push(this[i]);
+    }
+    return array;
+};
+
+Array.prototype.randomElement = function() {
+    return this[Math.floor(Math.random() * this.length)];
 };
 
 function clone2DArray(array) {
@@ -47,6 +65,14 @@ function init2DArray(width, height, value) {
     return array;
 }
 
+function range(num) {
+    var r = [];
+    for(var i = 0; i < num; ++i) {
+        r.push(i);
+    }
+    return r;
+}
+
 function incKey(obj, key) {
     if(!(key in obj)) {
         obj[key] = 0;
@@ -57,6 +83,12 @@ function incKey(obj, key) {
 
 function isEven(n) {
     return n % 2 === 0;
+}
+
+function debug(str) {
+    if(LOGGING) {
+        console.log(str);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,7 +157,8 @@ Board.prototype.makeMove = function(move) {
 };
 
 Board.prototype.isLegalMove = function(move) {
-    return this.board[move][HEIGHT - 1] == EMPTY;
+    return this.board[move][HEIGHT - 1] == EMPTY
+        && this.status == IN_PROGRESS;
 };
 
 Board.prototype._calcStatus = function(pos, turn) {
@@ -176,16 +209,9 @@ function randomMove() {
 }
 
 function randomLegalMove(board) {
-    var move = randomMove();
-    var tries = 200;
-    while(!board.isLegalMove(move)) {
-        move = randomMove();
-        tries--;
-        if(tries < 0) {
-            throw ERROR_NO_LEGAL_MOVES_FOUND;
-        }
-    }
-    return move;
+    return range(WIDTH)
+        .filter(function(m) { return board.isLegalMove(m)})
+        .randomElement();
 }
 
 function oppositeColor(color) {
@@ -289,6 +315,178 @@ MonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
     }
     return b;
 };
+
+var MCTS = function() {
+
+    // Attempt at the official MCTS algorithm.
+    //
+    // Resources
+    // - original paper                               = http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.81.6817
+    // - original UCT formula                         = http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.102.1296
+    // - wikipedia page                               = http://en.wikipedia.org/wiki/Monte-Carlo_Tree_Search#cite_note-Kocsis-Szepesvari-13
+    // - MoGo paper (first strong go-playing program) = http://hal.inria.fr/docs/00/11/72/66/PDF/MoGoReport.pdf
+    // - arimaa master thesis (good overview)         = http://arimaa.com/arimaa/papers/TomasKozelekThesis/mt.pdf
+    function MCTS(color, spec) {
+        this.color = color;
+        this.tries = spec.tries;
+    }
+
+    MCTS.prototype.description = function() {
+        return "MCTS: " + this.tries;
+    };
+
+    MCTS.prototype.nextMove = function(board) {
+        var root = new Node(null);
+        root.expand(board);
+        for(var i = 0; i < this.tries; ++i) {
+            var node = descend(root);
+            var b = catchUpBoard(board.clone(), node);
+            if(b.status != IN_PROGRESS) {
+                this.backPropogate(b.status, node);
+                continue;
+            }
+            node.expand(b);
+            var child = node.children
+                .filter(function(n) { return n.legalMove; })
+                .randomElement();
+            var resultStatus = runSimulation(b, child.move);
+            this.backPropogate(resultStatus, child);
+        }
+        debug(root);
+        debug("root children wins        : " + root.children.map(function(c) { return prettyNum(c.wins); }));
+        debug("root children simulations : " + root.children.map(function(c) { return prettyNum(c.simulations); }));
+        debug("root children scores      : " + root.children.map(function(c) { return prettyNum(c.getScore()); }));
+        return highestSimulations(root).move;
+    };
+
+    function highestSimulations(node) {
+        var legals = node.children.filter(function(n) { return n.legalMove; });
+        var simulations = legals.map(function(n) { return n.simulations; });
+        var maxScore = Math.max.apply(null, simulations);
+        var maxNodes = node.children.filter(function(n) { return n.simulations == maxScore; });
+        var chosenNode = maxNodes.randomElement();
+        return chosenNode;
+    }
+
+    function prettyNum(n) {
+        n = n.toFixed(2);
+        while(n.toString().length < 8) {
+            n = " " + n;
+        }
+        return n;
+    }
+
+    MCTS.prototype.backPropogate = function(boardStatus, node) {
+        if(IWon(this.color, boardStatus)) {
+            backPropogateWin(node);
+            return;
+        }
+        if(ILost(this.color, boardStatus) || boardStatus == DRAW) {
+            backPropogateLoss(node);
+            return;
+        }
+    };
+
+    function descend(node) {
+        var n = node;
+        while(!n.isTerminal()) {
+            n = bestChild(n);
+        }
+        return n;
+    }
+
+    function bestChild(node) {
+        var bestNodes = [];
+        var bestScore = -Infinity;
+        for(var i = 0; i < node.children.length; ++i) {
+            if(!node.children[i].legalMove) {
+                continue;
+            }
+            var score = node.children[i].getScore();
+            if(score > bestScore) {
+                bestNodes = [node.children[i]];
+                bestScore = score;
+            } else {
+                bestNodes.push(node.children[i]);
+            }
+        }
+        if(bestNodes.length === 0) {
+            console.log("error: node has no legal moves");
+            console.log(node);
+            throw ERROR_NO_LEGAL_MOVES;
+        }
+        return bestNodes.randomElement();
+    }
+
+    function catchUpBoard(board, node) {
+        var moves = node.ancestors.map(function(a) { return a.move; });
+        moves = moves.tail();
+        moves.push(node.move);
+        for(var i = 0; i < moves.length; ++i) {
+            board.makeMove(moves[i]);
+        }
+        return board;
+    }
+
+    function backPropogateLoss(node) {
+        backPropogateField(node, "simulations");
+    }
+
+    function backPropogateWin(node) {
+        backPropogateField(node, "simulations");
+        backPropogateField(node, "wins");
+    }
+
+    function backPropogateField(node, field) {
+        node[field]++;
+        for(var i = 0; i < node.ancestors.length; ++i) {
+            node.ancestors[i][field]++;
+        }
+    }
+
+    function runSimulation(board, move) {
+        board.makeMove(move);
+        while(board.status == IN_PROGRESS) {
+            board.makeMove(randomLegalMove(board));
+        }
+        return board.status;
+    }
+
+    function Node(move) {
+        this.move = move;
+        this.simulations = 1;
+        this.wins = 0;
+        this.children = [];
+        this.ancestors = [];
+        this.legalMove = true;
+        this.C = Math.sqrt(2);
+    }
+
+    Node.prototype.expand = function(board) {
+      for(var i = 0; i < WIDTH; ++i) {
+          var n = new Node(i);
+          n.ancestors = this.ancestors.concat([this]);
+          n.legalMove = board.isLegalMove(i) && board.status == IN_PROGRESS;
+          this.children.push(n);
+      }
+    };
+
+    Node.prototype.getScore = function() {
+        if(this.simulations === 0) {
+            return 0;
+        }
+        var firstTerm = this.wins / this.simulations;
+        var inRoot = Math.log(this.ancestors.last().simulations) / this.simulations;
+        var secondTerm = this.C * Math.sqrt(inRoot);
+        return firstTerm + secondTerm;
+    };
+
+    Node.prototype.isTerminal = function() {
+        return this.children.length === 0;
+    };
+
+    return MCTS;
+}();
 
 ///////////////////////////////////////////////////////////////////////////////
 //// running games
@@ -480,11 +678,16 @@ var parity300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100, 2
 var parity50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100, 2); };
 var parity1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100, 2); };
 
+// MCTS
+var mcts100 = function(color) { return new MCTS(color, {tries: 100}); };
+var mcts300 = function(color) { return new MCTS(color, {tries: 300}); };
+
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
 function main() {
-    console.log(summarizeMatches(battleRoyale([depth300, depth300], 1000)));
+    console.log(summarizeMatches(battleRoyale([monkey, smc100, mcts100, mcts300], 100)));
+    // console.log(summarizeMatches(battleRoyale([monkey, mcts100], 1)));
 }
 
 console.time("main");
