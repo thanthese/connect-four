@@ -802,10 +802,10 @@ var mcss100 = function(color) {
 var mcss500 = function(color) {
     return new MonteCarloShort(color, 500);
 };
-var mcss50k = function(color) {
+var mcss50k = function(color) { // way, WAY too slow
     return new MonteCarloShort(color, 50000);
 };
-var mcss1m = function(color) {
+var mcss1m = function(color) { // don't even bother
     return new MonteCarloShort(color, 1000000);
 };
 
@@ -853,5 +853,5 @@ function mainHumanGame(opponent) {
     process.stdin.on("data", generatedCallback);
 }
 
-mainHumanGame(depth1m);
+mainHumanGame(depth50k);
 // mainBotFight();
