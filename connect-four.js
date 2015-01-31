@@ -31,7 +31,7 @@ Array.prototype.last = function() {
 
 Array.prototype.tail = function() {
     var array = [];
-    for(var i = 1; i < this.length; ++i) {
+    for (var i = 1; i < this.length; ++i) {
         array.push(this[i]);
     }
     return array;
@@ -43,7 +43,7 @@ Array.prototype.randomElement = function() {
 
 function clone2DArray(array) {
     var a = [];
-    for(var i = 0; i < array.length; ++i) {
+    for (var i = 0; i < array.length; ++i) {
         a.push(array[i].clone());
     }
     return a;
@@ -51,7 +51,7 @@ function clone2DArray(array) {
 
 function initArray(size, value) {
     var array = [];
-    for(var i = 0; i < size; ++i) {
+    for (var i = 0; i < size; ++i) {
         array.push(value);
     }
     return array;
@@ -59,7 +59,7 @@ function initArray(size, value) {
 
 function init2DArray(width, height, value) {
     var array = [];
-    for(var x = 0; x < width; ++x) {
+    for (var x = 0; x < width; ++x) {
         array[x] = initArray(height, value);
     }
     return array;
@@ -67,17 +67,17 @@ function init2DArray(width, height, value) {
 
 function range(num) {
     var r = [];
-    for(var i = 0; i < num; ++i) {
+    for (var i = 0; i < num; ++i) {
         r.push(i);
     }
     return r;
 }
 
 function incKey(obj, key) {
-    if(!(key in obj)) {
+    if (!(key in obj)) {
         obj[key] = 0;
     }
-    obj[key]++;
+    obj[key] ++;
     return obj;
 }
 
@@ -86,10 +86,12 @@ function isEven(n) {
 }
 
 function debug(str) {
-    if(LOGGING) {
-        console.log(str);
+    if (LOGGING) {
+        clog(str);
     }
 }
+
+var clog = console.log;
 
 ///////////////////////////////////////////////////////////////////////////////
 //// Connect Four logic
@@ -115,9 +117,9 @@ Board.prototype.toString = function() {
     var rows = [];
     rows.push("0  1  2  3  4  5  6");
     rows.push("-------------------");
-    for(var y = HEIGHT - 1; y >= 0; --y) {
+    for (var y = HEIGHT - 1; y >= 0; --y) {
         var row = [];
-        for(var x = 0; x < WIDTH; ++x) {
+        for (var x = 0; x < WIDTH; ++x) {
             row.push(this.board[x][y]);
         }
         rows.push(row.join("  "));
@@ -128,7 +130,7 @@ Board.prototype.toString = function() {
 };
 
 Board.prototype._prettyStatus = function(status) {
-    switch(status) {
+    switch (status) {
         case RED_WON:
             return "red wins!";
         case BLACK_WON:
@@ -142,11 +144,11 @@ Board.prototype._prettyStatus = function(status) {
 
 // destructive operation
 Board.prototype.makeMove = function(move) {
-    if(!this.isLegalMove(move)) {
+    if (!this.isLegalMove(move)) {
         throw ERROR_ILLEGAL_MOVE;
     }
     var y = HEIGHT - 1;
-    while(y > 0 && this.board[move][y - 1] == EMPTY) {
+    while (y > 0 && this.board[move][y - 1] == EMPTY) {
         y--;
     }
     this.board[move][y] = this.turn;
@@ -157,26 +159,25 @@ Board.prototype.makeMove = function(move) {
 };
 
 Board.prototype.isLegalMove = function(move) {
-    return this.board[move][HEIGHT - 1] == EMPTY
-        && this.status == IN_PROGRESS;
+    return this.board[move][HEIGHT - 1] == EMPTY && this.status == IN_PROGRESS;
 };
 
 Board.prototype._calcStatus = function(pos, turn) {
     var winCode = turn == RED ? RED_WON : BLACK_WON;
-    if(this._dirCheck(pos, turn, [0, -1]) >= 3) {
+    if (this._dirCheck(pos, turn, [0, -1]) >= 3) {
         return winCode;
     }
-    if(this._dirCheck(pos, turn, [1, 0]) + this._dirCheck(pos, turn, [-1, 0]) >= 3) {
+    if (this._dirCheck(pos, turn, [1, 0]) + this._dirCheck(pos, turn, [-1, 0]) >= 3) {
         return winCode;
     }
-    if(this._dirCheck(pos, turn, [1, 1]) + this._dirCheck(pos, turn, [-1, -1]) >= 3) {
+    if (this._dirCheck(pos, turn, [1, 1]) + this._dirCheck(pos, turn, [-1, -1]) >= 3) {
         return winCode;
     }
-    if(this._dirCheck(pos, turn, [-1, 1]) + this._dirCheck(pos, turn, [1, -1]) >= 3) {
+    if (this._dirCheck(pos, turn, [-1, 1]) + this._dirCheck(pos, turn, [1, -1]) >= 3) {
         return winCode;
     }
 
-    if(this._isDrawn()) {
+    if (this._isDrawn()) {
         return DRAW;
     }
 
@@ -186,11 +187,10 @@ Board.prototype._calcStatus = function(pos, turn) {
 // Starting from a position on the board, and given a direction, return
 // how many pieces of a given color are in that direction in a row.
 Board.prototype._dirCheck = function(pos, turn, vec) {
-    for(var factor = 1; factor <= 3; ++factor) {
+    for (var factor = 1; factor <= 3; ++factor) {
         var x = pos[0] + vec[0] * factor;
         var y = pos[1] + vec[1] * factor;
-        if(x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1
-                || this.board[x][y] != turn) {
+        if (x < 0 || x > WIDTH - 1 || y < 0 || y > HEIGHT - 1 || this.board[x][y] != turn) {
             return factor - 1;
         }
     }
@@ -210,7 +210,9 @@ function randomMove() {
 
 function randomLegalMove(board) {
     return range(WIDTH)
-        .filter(function(m) { return board.isLegalMove(m)})
+        .filter(function(m) {
+            return board.isLegalMove(m);
+        })
         .randomElement();
 }
 
@@ -219,13 +221,11 @@ function oppositeColor(color) {
 }
 
 function IWon(myColor, boardStatus) {
-    return (myColor == RED && boardStatus == RED_WON)
-        || (myColor == BLACK && boardStatus == BLACK_WON);
+    return (myColor == RED && boardStatus == RED_WON) || (myColor == BLACK && boardStatus == BLACK_WON);
 }
 
 function ILost(myColor, boardStatus) {
-    return (myColor == RED && boardStatus == BLACK_WON)
-        || (myColor == BLACK && boardStatus == RED_WON);
+    return (myColor == RED && boardStatus == BLACK_WON) || (myColor == BLACK && boardStatus == RED_WON);
 }
 
 // Strategy: make any random legal move
@@ -249,11 +249,83 @@ Lefty.prototype.description = function() {
 };
 
 Lefty.prototype.nextMove = function(board) {
-    for(var x = 0; x < WIDTH; ++x) {
-        if(board.isLegalMove(x)) {
+    for (var x = 0; x < WIDTH; ++x) {
+        if (board.isLegalMove(x)) {
             return x;
         }
     }
+};
+
+// This is your basic monte carlo alg, but with a simple twist: during
+// the random simulation if either side can win on the current turn,
+// it will. Otherwise play is random.
+function MonteCarloShort(color, triesPerMove) {
+    this.color = color;
+    this.triesPerMove = triesPerMove;
+}
+
+MonteCarloShort.prototype.description = function() {
+    return "Monte Carlo, short circuit";
+};
+
+MonteCarloShort.prototype.nextMove = function(board) {
+    var bestMove;
+    var bestScore;
+
+    // make winning move right away if it exists
+    var wm = this.winningMove(board);
+    if (wm != -1) {
+        return wm;
+    }
+
+    for (var move = 0; move < WIDTH; ++move) {
+        if (board.isLegalMove(move)) {
+
+            // run simulations on starting move
+            var score = 0;
+            for (var t = 0; t < this.triesPerMove; ++t) {
+                var finalBoard = this.simulateFromMoveToEndOfGame(board, move);
+                if (IWon(this.color, finalBoard.status)) {
+                    ++score;
+                }
+            }
+
+            // score how move did in simulations
+            if (!bestScore || bestScore < score) {
+                bestScore = score;
+                bestMove = move;
+            }
+        }
+    }
+    return bestMove;
+};
+
+MonteCarloShort.prototype.simulateFromMoveToEndOfGame = function(board, move) {
+    var b = board.clone();
+    b.makeMove(move);
+    while (b.status == IN_PROGRESS) {
+        var wm = this.winningMove(b);
+        if (wm != -1) {
+            b.makeMove(wm);
+        } else {
+            b.makeMove(randomLegalMove(b));
+        }
+    }
+    return b;
+};
+
+// Return winning move if there is one, otherwise -1.
+MonteCarloShort.prototype.winningMove = function(board) {
+    for (var move = 0; move < WIDTH; ++move) {
+        if (board.isLegalMove(move)) {
+            var b = board.clone();
+            b.makeMove(move);
+            if (b.status != IN_PROGRESS) {
+                return move;
+            }
+        }
+    }
+    return -1;
 };
 
 // Strategy: Monte Carlo
@@ -272,31 +344,26 @@ function MonteCarlo(color, tries, depth, winBonus, lossBonus, parityBonus) {
 }
 
 MonteCarlo.prototype.description = function() {
-    return "Depth Matters 2: #" + this.tries
-        + " D" + this.depth
-        + " W" + this.winBonus
-        + " L" + this.lossBonus
-        + " P" + this.parityBonus;
+    return "Depth Matters 2: #" + this.tries + " D" + this.depth + " W" + this.winBonus + " L" + this.lossBonus + " P" + this.parityBonus;
 };
 
 MonteCarlo.prototype.nextMove = function(board) {
     var moveScores = initArray(WIDTH, 0);
-    for(var t = 0; t < this.tries; ++t) {
+    for (var t = 0; t < this.tries; ++t) {
         var move = randomMove();
         var finalBoard = this.simulateFromMoveToEndOfGame(board, move);
-        if(finalBoard == ERROR_ILLEGAL_MOVE) {
+        if (finalBoard == ERROR_ILLEGAL_MOVE) {
             moveScores[move] -= this.illegalBonus;
             continue;
         }
         var depth = finalBoard.moveHistory.length - board.moveHistory.length;
-        if(IWon(this.color, finalBoard.status)) {
+        if (IWon(this.color, finalBoard.status)) {
             moveScores[move] += depth <= this.depth ? this.winBonus : 1;
             var winningMoveRow = finalBoard.moveHistory[finalBoard.moveHistory.length - 1][1];
-            if((this.color == BLACK && isEven(winningMoveRow))
-                    || (this.color == RED && !isEven(winningMoveRow))) {
+            if ((this.color == BLACK && isEven(winningMoveRow)) || (this.color == RED && !isEven(winningMoveRow))) {
                 moveScores[move] += this.parityBonus;
             }
-        } else if(ILost(this.color, finalBoard.status)) {
+        } else if (ILost(this.color, finalBoard.status)) {
             moveScores[move] -= depth <= this.depth ? this.lossBonus : 1;
         }
     }
@@ -305,12 +372,12 @@ MonteCarlo.prototype.nextMove = function(board) {
 };
 
 MonteCarlo.prototype.simulateFromMoveToEndOfGame = function(board, moveToTest) {
-    if(!board.isLegalMove(moveToTest)) {
+    if (!board.isLegalMove(moveToTest)) {
         return ERROR_ILLEGAL_MOVE;
     }
     var b = board.clone();
     b.makeMove(moveToTest);
-    while(b.status == IN_PROGRESS) {
+    while (b.status == IN_PROGRESS) {
         b.makeMove(randomLegalMove(b));
     }
     return b;
@@ -338,50 +405,64 @@ var MCTS = function() {
     MCTS.prototype.nextMove = function(board) {
         var root = new Node(null);
         root.expand(board);
-        for(var i = 0; i < this.tries; ++i) {
+        for (var i = 0; i < this.tries; ++i) {
             var node = descend(root);
             var b = catchUpBoard(board.clone(), node);
-            if(b.status != IN_PROGRESS) {
+            if (b.status != IN_PROGRESS) {
                 this.backPropogate(b.status, node);
                 continue;
             }
             node.expand(b);
             var child = node.children
-                .filter(function(n) { return n.legalMove; })
+                .filter(function(n) {
+                    return n.legalMove;
+                })
                 .randomElement();
             var resultStatus = runSimulation(b, child.move);
             this.backPropogate(resultStatus, child);
         }
         debug(root);
-        debug("root children wins        : " + root.children.map(function(c) { return prettyNum(c.wins); }));
-        debug("root children simulations : " + root.children.map(function(c) { return prettyNum(c.simulations); }));
-        debug("root children scores      : " + root.children.map(function(c) { return prettyNum(c.getScore()); }));
+        debug("root children wins        : " + root.children.map(function(c) {
+            return prettyNum(c.wins);
+        }));
+        debug("root children simulations : " + root.children.map(function(c) {
+            return prettyNum(c.simulations);
+        }));
+        debug("root children scores      : " + root.children.map(function(c) {
+            return prettyNum(c.getScore());
+        }));
         return highestSimulations(root).move;
     };
 
     function highestSimulations(node) {
-        var legals = node.children.filter(function(n) { return n.legalMove; });
-        var simulations = legals.map(function(n) { return n.simulations; });
+        var legals = node.children.filter(function(n) {
+            return n.legalMove;
+        });
+        var simulations = legals.map(function(n) {
+            return n.simulations;
+        });
         var maxScore = Math.max.apply(null, simulations);
-        var maxNodes = node.children.filter(function(n) { return n.simulations == maxScore; });
+        var maxNodes = node.children.filter(function(n) {
+            return n.simulations == maxScore;
+        });
         var chosenNode = maxNodes.randomElement();
         return chosenNode;
     }
 
     function prettyNum(n) {
         n = n.toFixed(2);
-        while(n.toString().length < 8) {
+        while (n.toString().length < 8) {
             n = " " + n;
         }
         return n;
     }
 
     MCTS.prototype.backPropogate = function(boardStatus, node) {
-        if(IWon(this.color, boardStatus)) {
+        if (IWon(this.color, boardStatus)) {
             backPropogateWin(node);
             return;
         }
-        if(ILost(this.color, boardStatus) || boardStatus == DRAW) {
+        if (ILost(this.color, boardStatus) || boardStatus == DRAW) {
             backPropogateLoss(node);
             return;
         }
@@ -389,7 +470,7 @@ var MCTS = function() {
 
     function descend(node) {
         var n = node;
-        while(!n.isTerminal()) {
+        while (!n.isTerminal()) {
             n = bestChild(n);
         }
         return n;
@@ -398,31 +479,33 @@ var MCTS = function() {
     function bestChild(node) {
         var bestNodes = [];
         var bestScore = -Infinity;
-        for(var i = 0; i < node.children.length; ++i) {
-            if(!node.children[i].legalMove) {
+        for (var i = 0; i < node.children.length; ++i) {
+            if (!node.children[i].legalMove) {
                 continue;
             }
             var score = node.children[i].getScore();
-            if(score > bestScore) {
+            if (score > bestScore) {
                 bestNodes = [node.children[i]];
                 bestScore = score;
             } else {
                 bestNodes.push(node.children[i]);
             }
         }
-        if(bestNodes.length === 0) {
-            console.log("error: node has no legal moves");
-            console.log(node);
+        if (bestNodes.length === 0) {
+            clog("error: node has no legal moves");
+            clog(node);
             throw ERROR_NO_LEGAL_MOVES;
         }
         return bestNodes.randomElement();
     }
 
     function catchUpBoard(board, node) {
-        var moves = node.ancestors.map(function(a) { return a.move; });
+        var moves = node.ancestors.map(function(a) {
+            return a.move;
+        });
         moves = moves.tail();
         moves.push(node.move);
-        for(var i = 0; i < moves.length; ++i) {
+        for (var i = 0; i < moves.length; ++i) {
             board.makeMove(moves[i]);
         }
         return board;
@@ -438,15 +521,15 @@ var MCTS = function() {
     }
 
     function backPropogateField(node, field) {
-        node[field]++;
-        for(var i = 0; i < node.ancestors.length; ++i) {
-            node.ancestors[i][field]++;
+        node[field] ++;
+        for (var i = 0; i < node.ancestors.length; ++i) {
+            node.ancestors[i][field] ++;
         }
     }
 
     function runSimulation(board, move) {
         board.makeMove(move);
-        while(board.status == IN_PROGRESS) {
+        while (board.status == IN_PROGRESS) {
             board.makeMove(randomLegalMove(board));
         }
         return board.status;
@@ -463,16 +546,16 @@ var MCTS = function() {
     }
 
     Node.prototype.expand = function(board) {
-      for(var i = 0; i < WIDTH; ++i) {
-          var n = new Node(i);
-          n.ancestors = this.ancestors.concat([this]);
-          n.legalMove = board.isLegalMove(i) && board.status == IN_PROGRESS;
-          this.children.push(n);
-      }
+        for (var i = 0; i < WIDTH; ++i) {
+            var n = new Node(i);
+            n.ancestors = this.ancestors.concat([this]);
+            n.legalMove = board.isLegalMove(i) && board.status == IN_PROGRESS;
+            this.children.push(n);
+        }
     };
 
     Node.prototype.getScore = function() {
-        if(this.simulations === 0) {
+        if (this.simulations === 0) {
             return 0;
         }
         var firstTerm = this.wins / this.simulations;
@@ -494,13 +577,13 @@ var MCTS = function() {
 // playerA must be red and will go first
 function playSingleGame(botA, botB) {
     var board = new Board();
-    while(true) {
+    while (true) {
         board.makeMove(botA.nextMove(board));
-        if(board.status != IN_PROGRESS) {
+        if (board.status != IN_PROGRESS) {
             return board;
         }
         board.makeMove(botB.nextMove(board));
-        if(board.status != IN_PROGRESS) {
+        if (board.status != IN_PROGRESS) {
             return board;
         }
     }
@@ -510,9 +593,10 @@ function playSingleGame(botA, botB) {
 // their chance to go first.
 function playManyGames(botFactoryA, botFactoryB, numOfGames) {
     var gamesLog = [];
-    for(var i = 0; i < numOfGames; ++i) {
+    for (var i = 0; i < numOfGames; ++i) {
+        clog("playing game: " + i);
         var red, black, winner, loser, playerAisRed, winnerId;
-        if(Math.random() < 0.5) {
+        if (Math.random() < 0.5) {
             red = botFactoryA(RED);
             black = botFactoryB(BLACK);
             playerAisRed = true;
@@ -522,11 +606,11 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
             playerAisRed = false;
         }
         var board = playSingleGame(red, black);
-        if(board.status == RED_WON) {
+        if (board.status == RED_WON) {
             winner = red;
             loser = black;
             winnerId = playerAisRed ? 1 : 2;
-        } else if(board.status == BLACK_WON) {
+        } else if (board.status == BLACK_WON) {
             winner = black;
             loser = red;
             winnerId = playerAisRed ? 2 : 1;
@@ -535,9 +619,12 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
             loser = DRAW;
             winnerId = 0;
         }
-        gamesLog.push({winnerId: winnerId,
-            winner: winner, loser: loser,
-            board: board});
+        gamesLog.push({
+            winnerId: winnerId,
+            winner: winner,
+            loser: loser,
+            board: board
+        });
     }
     return gamesLog;
 }
@@ -546,8 +633,8 @@ function playManyGames(botFactoryA, botFactoryB, numOfGames) {
 // match, play numOfGames.
 function battleRoyale(botFactories, numOfGames) {
     var matches = [];
-    for(var i = 0; i < botFactories.length; ++i) {
-        for(var j = i + 1; j < botFactories.length; ++j) {
+    for (var i = 0; i < botFactories.length; ++i) {
+        for (var j = i + 1; j < botFactories.length; ++j) {
             matches.push(playManyGames(botFactories[i], botFactories[j], numOfGames));
         }
     }
@@ -561,7 +648,7 @@ function HumanGame(botFactory, humanGoesFirst) {
     this.board = new Board();
     this.opponent = botFactory(humanGoesFirst ? BLACK : RED);
     this.color = humanGoesFirst ? RED : BLACK;
-    if(!humanGoesFirst) {
+    if (!humanGoesFirst) {
         this._makeBotMove();
     }
     this._showBoard();
@@ -570,21 +657,22 @@ function HumanGame(botFactory, humanGoesFirst) {
 HumanGame.prototype.move = function(move) {
     this.board.makeMove(move);
     this._showBoard();
-    if(this.board.status == IN_PROGRESS) {
+    if (this.board.status == IN_PROGRESS) {
         this._makeBotMove();
         this._showBoard();
     }
+    return this.board.status;
 };
 
 HumanGame.prototype._makeBotMove = function() {
     var move = this.opponent.nextMove(this.board);
     this.board.makeMove(move);
-    console.log("Bot moved at: " + move);
+    clog("Bot moved at: " + move);
 };
 
 HumanGame.prototype._showBoard = function() {
-    console.log("You are: " + this.color);
-    console.log(this.board.toString());
+    clog("You are: " + this.color);
+    clog(this.board.toString());
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -592,20 +680,23 @@ HumanGame.prototype._showBoard = function() {
 
 // generate high-level totals of who won how many games
 function summarizeGames(games) {
-    var totals = {red: 0, black: 0};
-    for(var i = 0; i < games.length; ++i) {
-        if(games[i].winner === DRAW) {
+    var totals = {
+        red: 0,
+        black: 0
+    };
+    for (var i = 0; i < games.length; ++i) {
+        if (games[i].winner === DRAW) {
             incKey(totals, "draw");
         } else {
-            if(games[i].winner.color == RED) {
+            if (games[i].winner.color == RED) {
                 totals.red++;
             }
-            if(games[i].winner.color == BLACK) {
+            if (games[i].winner.color == BLACK) {
                 totals.black++;
             }
             incKey(totals, games[i].winner.description());
             var loserDesc = games[i].loser.description();
-            if(!(loserDesc in totals)) {
+            if (!(loserDesc in totals)) {
                 totals[loserDesc] = 0;
             }
         }
@@ -624,8 +715,8 @@ function findLoss(botFactoryA, botFactoryB, desiredLoserId) {
     do {
         game = playManyGames(botFactoryA, botFactoryB, 1)[0];
         attempts++;
-    } while(game.winnerId == desiredLoserId);
-    console.log("Lost game found in " + attempts + " attempts.");
+    } while (game.winnerId == desiredLoserId);
+    clog("Lost game found in " + attempts + " attempts.");
     return game;
 }
 
@@ -642,13 +733,13 @@ function replayMonteCarloWin(game) {
 function _replayMonteCarlo(game, winnerOrLoser) {
     var board = new Board();
     var weightsTurn = 0;
-    console.log(game);
-    console.log(board.toString());
-    for(var i = 0; i < game.board.moveHistory.length; ++i) {
+    clog(game);
+    clog(board.toString());
+    for (var i = 0; i < game.board.moveHistory.length; ++i) {
         board.makeMove(game.board.moveHistory[i][0]);
-        console.log(board.toString());
-        if(board.turn == game[winnerOrLoser].color && board.status == IN_PROGRESS) {
-            console.log(game[winnerOrLoser].weightsHistory[weightsTurn]);
+        clog(board.toString());
+        if (board.turn == game[winnerOrLoser].color && board.status == IN_PROGRESS) {
+            clog(game[winnerOrLoser].weightsHistory[weightsTurn]);
             weightsTurn++;
         }
     }
@@ -658,38 +749,109 @@ function _replayMonteCarlo(game, winnerOrLoser) {
 //// bot factories
 
 // controls
-var monkey = function(color) { return new ChaosMonkey(color); };
-var lefty = function(color) { return new Lefty(color); };
+var monkey = function(color) {
+    return new ChaosMonkey(color);
+};
+var lefty = function(color) {
+    return new Lefty(color);
+};
 
 // simple monte carlo
-var smc100 = function(color) { return new MonteCarlo(color, 100, 0, 0, 0, 0); };
-var smc300 = function(color) { return new MonteCarlo(color, 300, 0, 0, 0, 0); };
-var smc50k = function(color) { return new MonteCarlo(color, 50000, 0, 0, 0, 0); };
+var smc100 = function(color) {
+    return new MonteCarlo(color, 100, 0, 0, 0, 0);
+};
+var smc300 = function(color) {
+    return new MonteCarlo(color, 300, 0, 0, 0, 0);
+};
+var smc50k = function(color) {
+    return new MonteCarlo(color, 50000, 0, 0, 0, 0);
+};
 
-// depth, with loss bonus
-var depth100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100, 0); };
-var depth300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100, 0); };
-var depth50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100, 0); };
-var depth1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100, 0); };
+// depth, with loss bonus (smarter than simple)
+var depth100 = function(color) {
+    return new MonteCarlo(color, 100, 2, 1, 100, 0);
+};
+var depth300 = function(color) {
+    return new MonteCarlo(color, 300, 2, 1, 100, 0);
+};
+var depth50k = function(color) {
+    return new MonteCarlo(color, 50000, 2, 1, 100, 0);
+};
+var depth1m = function(color) {
+    return new MonteCarlo(color, 1000000, 2, 1, 100, 0);
+};
 
-// parity
-var parity100 = function(color) { return new MonteCarlo(color, 100, 2, 1, 100, 2); };
-var parity300 = function(color) { return new MonteCarlo(color, 300, 2, 1, 100, 2); };
-var parity50k = function(color) { return new MonteCarlo(color, 50000, 2, 1, 100, 2); };
-var parity1m = function(color) { return new MonteCarlo(color, 1000000, 2, 1, 100, 2); };
+// parity (not a front runner)
+var parity100 = function(color) {
+    return new MonteCarlo(color, 100, 2, 1, 100, 2);
+};
+var parity300 = function(color) {
+    return new MonteCarlo(color, 300, 2, 1, 100, 2);
+};
+var parity50k = function(color) {
+    return new MonteCarlo(color, 50000, 2, 1, 100, 2);
+};
+var parity1m = function(color) {
+    return new MonteCarlo(color, 1000000, 2, 1, 100, 2);
+};
 
-// MCTS
-var mcts100 = function(color) { return new MCTS(color, {tries: 100}); };
-var mcts300 = function(color) { return new MCTS(color, {tries: 300}); };
+// short circuit monte carlo
+var mcss100 = function(color) {
+    return new MonteCarloShort(color, 100);
+};
+var mcss500 = function(color) {
+    return new MonteCarloShort(color, 500);
+};
+var mcss50k = function(color) {
+    return new MonteCarloShort(color, 50000);
+};
+var mcss1m = function(color) {
+    return new MonteCarloShort(color, 1000000);
+};
+
+// MCTS (buggy? makes things worse)
+var mcts100 = function(color) {
+    return new MCTS(color, {
+        tries: 100
+    });
+};
+var mcts300 = function(color) {
+    return new MCTS(color, {
+        tries: 300
+    });
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 //// main
 
-function main() {
-    console.log(summarizeMatches(battleRoyale([monkey, smc100, mcts100, mcts300], 100)));
-    // console.log(summarizeMatches(battleRoyale([monkey, mcts100], 1)));
+function mainBotFight() {
+    clog("Starting battle royale...");
+    console.time("main");
+    // clog(summarizeMatches(battleRoyale([monkey, smc100, mcts100, mcts300], 100)));
+    clog(summarizeMatches(battleRoyale([depth100, mcss100], 100)));
+    console.timeEnd("main");
 }
 
-console.time("main");
-main();
-console.timeEnd("main");
+function mainHumanGame(opponent) {
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
+    var generatedCallback = function() {
+        var h = new HumanGame(opponent, Math.random() < 0.5);
+        return function(colStr) {
+            if (!/^[0-6]\n$/.test(colStr)) {
+                clog("Please enter a number 0-6 and press ENTER.");
+                return;
+            }
+            var status = h.move(parseInt(colStr, 10));
+            if (status !== IN_PROGRESS) {
+                clog("Game complete");
+                process.exit(0);
+            }
+        };
+    }();
+    process.stdin.on("data", generatedCallback);
+}
+
+mainHumanGame(depth1m);
+// mainBotFight();
